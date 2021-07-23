@@ -38,3 +38,16 @@ Exception: DIVBYZERO|INEXACT (((10.000000 * e) + 10.000000) / 0.000000)
 As can be seen here, the expression: `10*e+10` produces an inexact number,
 the division by zero triggers another exception on the whole expression. The
 `inf` result as required by IEEE is provided.
+
+# Documentation
+```
+./fpinspect [OPTION]... [EXPRESSION]
+-r   rounding mode
+      0 - nearest even [default]
+      1 - to zero
+      2 - down
+      3 - up
+-t   tininess detection mode
+      0 - before rounding [default]
+      1 - after rounding
+```

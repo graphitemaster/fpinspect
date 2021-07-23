@@ -5,7 +5,7 @@
 typedef struct Expression Expression;
 
 Bool expr_parse(Expression**, const char*);
-Float32 expr_eval(Expression*);
+Float32 expr_eval(Context*, Expression*);
 void expr_free(Expression*);
 void expr_print(FILE*, Expression*);
 

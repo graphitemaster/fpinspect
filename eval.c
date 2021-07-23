@@ -182,7 +182,7 @@ static Float32 eval_func2(Context *ctx, Uint32 func, Float32 a, Float32 b) {
   return ZERO;
 }
 
-static Float32 eval_expression(Context *ctx, Expression *expression) {
+Float32 expr_eval(Context *ctx, Expression *expression) {
   if (!expression) {
     return ZERO;
   }
@@ -190,8 +190,8 @@ static Float32 eval_expression(Context *ctx, Expression *expression) {
   Exception exception = ctx->exception;
   ctx->exception = 0; // clear
 
-  Float32 a = eval_expression(ctx, expression->params[0]);
-  Float32 b = eval_expression(ctx, expression->params[1]);
+  Float32 a = expr_eval(ctx, expression->params[0]);
+  Float32 b = expr_eval(ctx, expression->params[1]);
 
   Float32 result;
 
@@ -490,14 +490,6 @@ Bool expr_parse(Expression **expression, const char *string) {
 
   *expression = e;
   return true;
-}
-
-Float32 expr_eval(Expression *expression) {
-  Context c;
-  c.exception = 0;
-  c.round = ROUND_NEAREST_EVEN;
-  c.tininess = TININESS_BEFORE_ROUNDING;
-  return eval_expression(&c, expression);
 }
 
 void expr_free(Expression *expression) {
