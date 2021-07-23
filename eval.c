@@ -65,8 +65,10 @@ static const struct {
   { "copysign", FUNC_COPYSIGN }
 };
 
-static const Float32 ZERO = {0x00000000}; // 0.000000 = 0x0p+0
-static const Float32 ONE  = {0x3f800000}; // 1.000000 = 0x1p+0
+static const Float32 ZERO32 = {0x00000000}; // 0x0p+0
+static const Float32 ONE32  = {0x3f800000}; // 0x1p+0
+
+static const Float64 ZERO64 = {(Uint64)0x0000000000000000ull}; // 0x0p+0
 
 #define ARRAY_COUNT(x) \
   (sizeof (x) / sizeof (*(x)))
@@ -154,7 +156,7 @@ void expr_print(FILE *fp, Expression *expression) {
   }
 }
 
-static Float32 eval_func1(Context *ctx, Uint32 func, Float32 a) {
+static Float32 eval_func1_32(Context *ctx, Uint32 func, Float32 a) {
   switch (func) {
   case FUNC_FLOOR:
     return float32_abs(ctx, a);
@@ -167,10 +169,10 @@ static Float32 eval_func1(Context *ctx, Uint32 func, Float32 a) {
   case FUNC_ABS:
     return float32_abs(ctx, a);
   }
-  return ZERO;
+  return ZERO32;
 }
 
-static Float32 eval_func2(Context *ctx, Uint32 func, Float32 a, Float32 b) {
+static Float32 eval_func2_32(Context *ctx, Uint32 func, Float32 a, Float32 b) {
   switch (func) {
   case FUNC_MIN:
     return float32_min(ctx, a, b);
@@ -179,67 +181,84 @@ static Float32 eval_func2(Context *ctx, Uint32 func, Float32 a, Float32 b) {
   case FUNC_COPYSIGN:
     return float32_copysign(ctx, a, b);
   }
-  return ZERO;
+  return ZERO32;
 }
 
-Float32 expr_eval(Context *ctx, Expression *expression) {
+Float32 expr_eval32(Context *ctx, Expression *expression) {
   if (!expression) {
-    return ZERO;
+    return ZERO32;
   }
 
-  Exception exception = ctx->exception;
-  ctx->exception = 0; // clear
+  Float32 a = expr_eval32(ctx, expression->params[0]);
+  Float32 b = expr_eval32(ctx, expression->params[1]);
 
-  Float32 a = expr_eval(ctx, expression->params[0]);
-  Float32 b = expr_eval(ctx, expression->params[1]);
-
-  Float32 result = ZERO;
+  Float32 result = ZERO32;
 
   switch (expression->type) {
   /****/ case EXPR_VALUE: result = expression->value;
   break; case EXPR_CONST: result = CONSTANTS[expression->constant].value;
-  break; case EXPR_FUNC1: result = eval_func1(ctx, expression->func, a);
-  break; case EXPR_FUNC2: result = eval_func2(ctx, expression->func, a, b);
-  break; case EXPR_EQ:    result = float32_eq(ctx, a, b) ? ONE : ZERO;
-  break; case EXPR_LTE:   result = float32_lte(ctx, a, b) ? ONE : ZERO;
-  break; case EXPR_LT:    result = float32_lt(ctx, a, b) ? ONE : ZERO;
-  break; case EXPR_NE:    result = float32_ne(ctx, a, b) ? ONE : ZERO;
-  break; case EXPR_GTE:   result = float32_gte(ctx, a, b) ? ONE : ZERO;
-  break; case EXPR_GT:    result = float32_gt(ctx, a, b) ? ONE : ZERO;
+  break; case EXPR_FUNC1: result = eval_func1_32(ctx, expression->func, a);
+  break; case EXPR_FUNC2: result = eval_func2_32(ctx, expression->func, a, b);
+  break; case EXPR_EQ:    result = float32_eq(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_LTE:   result = float32_lte(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_LT:    result = float32_lt(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_NE:    result = float32_ne(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_GTE:   result = float32_gte(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_GT:    result = float32_gt(ctx, a, b) ? ONE32 : ZERO32;
   break; case EXPR_ADD:   result = float32_add(ctx, a, b);
   break; case EXPR_SUB:   result = float32_sub(ctx, a, b);
   break; case EXPR_MUL:   result = float32_mul(ctx, a, b);
   break; case EXPR_DIV:   result = float32_div(ctx, a, b);
-  break; case EXPR_LAST:  result = ZERO;
+  break; case EXPR_LAST:  result = ZERO32;
   }
 
-  if (ctx->exception) {
-    fprintf(stderr, "Exception: ");
+  Size n_exceptions = array_size(ctx->exceptions);
+  for (Size i = 0; i < n_exceptions; i++) {
+    Exception exception = ctx->exceptions[i];
+    fprintf(stderr, "Exception: %zu (%zu roundings) ", i, ctx->roundings);
     Bool flag = false;
-    if (ctx->exception & EXCEPTION_INVALID) {
+    if (exception & EXCEPTION_INVALID) {
       fprintf(stderr, "%sINVALID", flag ? "|" : ""), flag = true;
     }
-    if (ctx->exception & EXCEPTION_DENORMAL) {
+    if (exception & EXCEPTION_DENORMAL) {
       fprintf(stderr, "%sDENORMAL", flag ? "|" : ""), flag = true;
     }
-    if (ctx->exception & EXCEPTION_DIVIDE_BY_ZERO) {
+    if (exception & EXCEPTION_DIVIDE_BY_ZERO) {
       fprintf(stderr, "%sDIVBYZERO", flag ? "|" : ""), flag = true;
     }
-    if (ctx->exception & EXCEPTION_OVERFLOW) {
+    if (exception & EXCEPTION_OVERFLOW) {
       fprintf(stderr, "%sOVERFLOW", flag ? "|" : ""), flag = true;
     }
-    if (ctx->exception & EXCEPTION_UNDERFLOW) {
+    if (exception & EXCEPTION_UNDERFLOW) {
       fprintf(stderr, "%sUNDERFLOW", flag ? "|" : ""), flag = true;
     }
-    if (ctx->exception & EXCEPTION_INEXACT) {
+    if (exception & EXCEPTION_INEXACT) {
       fprintf(stderr, "%sINEXACT", flag ? "|" : ""), flag = true;
     }
     fprintf(stderr, " ");
     expr_print(stderr, expression);
     fprintf(stderr, "\n");
   }
+  if (n_exceptions) {
+    fprintf(stderr, "\n");
+  }
 
-  ctx->exception |= exception;
+  return result;
+}
+
+Float64 expr_eval64(Context *ctx, Expression *expression) {
+  if (!expression) {
+    return ZERO64;
+  }
+
+  Float64 a = expr_eval64(ctx, expression->params[0]);
+  Float64 b = expr_eval64(ctx, expression->params[1]);
+
+  // TODO.
+  (void)a;
+  (void)b;
+
+  Float64 result = ZERO64;
 
   return result;
 }
@@ -250,14 +269,14 @@ static Expression *create(int type, Expression *e0, Expression *e1) {
     return NULL;
   }
   e->type = type;
-  e->value = ONE;
+  e->value = ONE32;
   e->params[0] = e0;
   e->params[1] = e1;
   return e;
 }
 
 static Bool parse_expr(Expression **e, Parser *p);
-static Bool parse_primary(Expression **e, Parser *p) {
+static Bool parse_primary(Expression **e, Parser *p, Flag sign) {
   Expression *d = calloc(1, sizeof *d);
   if (!d) {
     return false;
@@ -265,7 +284,7 @@ static Bool parse_primary(Expression **e, Parser *p) {
 
   char *next = p->s;
   char *s0 = p->s;
-  d->value = float32_from_string(p->s, &next);
+  d->value = float32_from_string(sign ? p->s - 1 : p->s, &next);
   if (next != p->s) {
     d->type = EXPR_VALUE;
     p->s = next;
@@ -273,7 +292,7 @@ static Bool parse_primary(Expression **e, Parser *p) {
     return true;
   }
 
-  d->value = ONE;
+  d->value = ONE32;
 
   for (Size i = 0; i < sizeof CONSTANTS / sizeof *CONSTANTS; i++) {
     if (!match(p->s, CONSTANTS[i].identifier)) {
@@ -348,16 +367,16 @@ static Bool parse_primary(Expression **e, Parser *p) {
   return true;
 }
 
-static Bool parse_top(Expression **e, Parser *p, Sint32 *sign) {
-  *sign = (*p->s == '+') - (*p->s == '-');
-  p->s += *sign & 1;
-  return parse_primary(e, p);
+static Bool parse_top(Expression **e, Parser *p) {
+  Flag sign = false;
+  if (*p->s == '+') p->s++; // skip unary '+'
+  else if (*p->s == '-') p->s++, sign = true; // skip unary '-'
+  return parse_primary(e, p, sign);
 }
 
 static Bool parse_factor(Expression **e, Parser *p) {
   Expression *e0;
-  Sint32 s0;
-  if (!parse_top(&e0, p, &s0)) {
+  if (!parse_top(&e0, p)) {
     return false;
   }
   // TODO(dweiler): Handle other operations here.
@@ -394,7 +413,7 @@ static Bool parse_subexpr(Expression **e, Parser *p) {
     return false;
   }
   while (*p->s == '+' || *p->s == '-') {
-    int ch = *p->s;
+    int ch = *p->s++;
     e1 = e0;
     if (!parse_term(&e2, p)) {
       expr_free(e1);
@@ -487,6 +506,8 @@ Bool expr_parse(Expression **expression, const char *string) {
     free(w);
     return false;
   }
+
+  free(w);
 
   *expression = e;
   return true;

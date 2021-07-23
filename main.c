@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
   }
 
   Context c;
-  c.exception = 0;
   c.round = ROUND_NEAREST_EVEN;
   c.tininess = TININESS_BEFORE_ROUNDING;
+  context_init(&c);
 
   // Parse some command line options.
   if (argv[0][0] == '-') {
@@ -61,10 +61,12 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  const Float32 result = expr_eval(&c, e);
+  const Float32 result = expr_eval32(&c, e);
   expr_print(stdout, e);
   printf("\n\t= %.*f\n", DBL_DIG - 1, float32_cast(result));
   expr_free(e);
+
+  context_free(&c);
 
   return 0;
 }

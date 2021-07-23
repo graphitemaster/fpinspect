@@ -1,25 +1,14 @@
 #ifndef SOFT_H
 #define SOFT_H
-#include "types.h"
+#include "array.h"
 
 typedef Sint8 Flag;
-
-typedef struct Float32 Float32;
-typedef struct Float64 Float64;
 
 typedef enum Round Round;
 typedef enum Exception Exception;
 typedef enum Tininess Tininess;
 
 typedef struct Context Context;
-
-struct Float32 {
-  Uint32 bits;
-};
-
-struct Float64 {
-  Uint32 bits[2];
-};
 
 enum Round {
   ROUND_NEAREST_EVEN,
@@ -44,41 +33,33 @@ enum Tininess {
 
 struct Context {
   Round round;
-  Exception exception;
+  Size roundings;
+  ARRAY(Exception) exceptions;
   Tininess tininess;
 };
 
-// Arithmetic functions.
-Float32 float32_add(Context*, Float32, Float32); // a + b
-Float32 float32_sub(Context*, Float32, Float32); // a - b
-Float32 float32_mul(Context*, Float32, Float32); // a * b
-Float32 float32_div(Context*, Float32, Float32); // a / b
+void context_init(Context* context);
+void context_free(Context* context);
+bool context_raise(Context *context, Exception exception);
 
-// Relational functions.
-Flag float32_eq(Context*, Float32, Float32); // a == b
-Flag float32_lte(Context*, Float32, Float32); // a <= b
-Flag float32_lt(Context*, Float32, Float32); // a < b
-Flag float32_ne(Context*, Float32, Float32); // a != b
-Flag float32_gte(Context*, Float32, Float32); // a >= b
-Flag float32_gt(Context*, Float32, Float32); // a > b
+// Special right shifts where the least significant bit of result is set when
+// any non-zero bits are shifted off.
+static inline Uint32 rshr32(Uint32 a, Sint16 count) {
+  if (count == 0) {
+    return a;
+  } else if (count < 32) {
+    return (a >> count) | ((a << ((-count) & 31)) != 0);
+  }
+  return a != 0 ? 1 : 0;
+}
 
-// Conversion functions.
-Float32 float32_from_sint32(Context *ctx, Sint32 x);
-
-// Kernel functions.
-Float32 float32_floor(Context*, Float32);
-Float32 float32_ceil(Context*, Float32);
-Float32 float32_trunc(Context*, Float32);
-Float32 float32_sqrt(Context*, Float32);
-Float32 float32_abs(Context*, Float32);
-Float32 float32_copysign(Context*, Float32, Float32);
-Float32 float32_max(Context*, Float32, Float32);
-Float32 float32_min(Context*, Float32, Float32);
-
-// Needed temporarily for printing.
-static inline float float32_cast(Float32 x) {
-  union { Float32 s; float h; } u = {x};
-  return u.h;
+static inline Uint64 rshr64(Uint64 a, Sint16 count) {
+  if (count == 0) {
+    return a;
+  } else if (count < 64) {
+    return (a >> count) | ((a << ((-count) & 63)) != 0);
+  }
+  return a != 0 ? 1 : 0;
 }
 
 #endif // SOFT_H

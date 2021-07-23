@@ -4,6 +4,7 @@ OBJS := $(SRCS:.c=.o)
 CFLAGS := -Wall
 CFLAGS += -Wextra
 CFLAGS += -O2
+CFLAGS += -g
 
 all: fpinspect
 
