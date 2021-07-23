@@ -128,7 +128,7 @@ struct Parser {
 void expr_print(FILE *fp, Expression *expression) {
   switch (expression->type) {
   case EXPR_VALUE:
-    fprintf(fp, "%f", *(float*)&expression->value);
+    fprintf(fp, "%f", float32_cast(expression->value));
     break;
   case EXPR_CONST:
     fprintf(fp, "%s", CONSTANTS[expression->constant].identifier);
@@ -193,7 +193,7 @@ Float32 expr_eval(Context *ctx, Expression *expression) {
   Float32 a = expr_eval(ctx, expression->params[0]);
   Float32 b = expr_eval(ctx, expression->params[1]);
 
-  Float32 result;
+  Float32 result = ZERO;
 
   switch (expression->type) {
   /****/ case EXPR_VALUE: result = expression->value;

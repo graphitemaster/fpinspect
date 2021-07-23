@@ -24,7 +24,7 @@ static inline Flag float32_is_nan(Float32 a) {
 }
 
 static inline Flag float32_is_snan(Float32 a) {
-  return ((a.bits >> 22) & 0xff) == 0x1fe && (a.bits & 0x003FFFFF);
+  return ((a.bits >> 22) & 0x1ff) == 0x1fe && (a.bits & 0x003FFFFF);
 }
 
 // When the result of evaluating something is not used the compiler will attempt
@@ -33,6 +33,7 @@ static inline Flag float32_is_snan(Float32 a) {
 static inline void float32_force_eval(Float32 x) {
   volatile Float32 y;
   y = x;
+  (void)y; // Mark as used.
 }
 
 static const Float32 FLOAT32_NAN = {0xffffffff};

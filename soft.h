@@ -75,4 +75,10 @@ Float32 float32_copysign(Context*, Float32, Float32);
 Float32 float32_max(Context*, Float32, Float32);
 Float32 float32_min(Context*, Float32, Float32);
 
+// Needed temporarily for printing.
+static inline float float32_cast(Float32 x) {
+  union { Float32 s; float h; } u = {x};
+  return u.h;
+}
+
 #endif // SOFT_H

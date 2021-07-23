@@ -61,9 +61,9 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  const Float32 r = expr_eval(&c, e);
+  const Float32 result = expr_eval(&c, e);
   expr_print(stdout, e);
-  printf("\n\t= %.*f\n", DBL_DIG - 1, *(float *)&r);
+  printf("\n\t= %.*f\n", DBL_DIG - 1, float32_cast(result));
   expr_free(e);
 
   return 0;
