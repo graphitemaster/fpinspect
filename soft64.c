@@ -314,7 +314,7 @@ Float64 float64_mul(Context *ctx, Float64 a, Float64 b) {
   b_sig = (b_sig | LIT64(0x0010000000000000)) << 11;
 
   // Compute with 128-bit mul, truncate to 64-bit.
-  Uint128 mul = uint128_mul64(a_sig, b_sig);
+  Uint128 mul = uint128_mul64x64(a_sig, b_sig);
   mul.z0 |= mul.z1 != 0;
   if (0 <= (Sint64)(mul.z0 << 1)) {
     mul.z0 <<= 1;
@@ -378,8 +378,16 @@ Float64 float64_div(Context *ctx, Float64 a, Float64 b) {
     exp++;
   }
 
-  // TODO(dweiler): 128-bit ALU.
-  Uint64 sig = a_sig;
+  Uint64 sig = uint128_div128x64((Uint128){a_sig, 0}, b_sig);
+  if ((sig & 0x1ff) <= 2) {
+    Uint128 term = uint128_mul64x64(b_sig, sig);
+    Uint128 rem = uint128_sub((Uint128){a_sig, 0}, term);
+    while ((Sint64)rem.z0 < 0) {
+      sig--;
+      rem = uint128_add(rem, (Uint128){0, b_sig});
+    }
+    sig |= rem.z1 != 0;
+  }
 
   return float64_round_and_pack(ctx, sign, exp, sig);
 }
