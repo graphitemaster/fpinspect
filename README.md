@@ -27,3 +27,14 @@ The following functions exist to 128-bits of precision
   * max
   * copysign
 
+# Example
+```
+[fpinspect]# ./fpinspect "(10*e+10)/0"
+Exception: INEXACT ((10.000000 * e) + 10.000000)
+Exception: DIVBYZERO|INEXACT (((10.000000 * e) + 10.000000) / 0.000000)
+(((10.000000 * e) + 10.000000) / 0.000000)
+ = inf
+```
+As can be seen here, the expression: `10*e+10` produces an inexact number,
+the division by zero triggers another exception on the whole expression. The
+`inf` result as required by IEEE is provided.
