@@ -1,5 +1,12 @@
 #include "soft64.h"
 
+typedef struct Normal64 Normal64;
+
+struct Normal64 {
+  Uint64 sig;
+  Sint16 exp;
+};
+
 static inline Uint64 float64_fract(Float64 a) {
   return a.bits & (Uint64)0x000FFFFFFFFFFFFFull;
 }
@@ -31,6 +38,32 @@ static inline Sint8 count_leading_zeros_u64(Uint64 a) {
 // Pack sign sign, exponent, and significant into single-precision float.
 static inline Float64 float64_pack(Flag sign, Sint16 exp, Uint64 sig) {
   return (Float64){(((Uint64)sign) << 63) + (((Uint64)exp) << 52) + sig};
+}
+
+// Multiplies two 64-bit integers to obtain 128-bit product.
+typedef struct Mul128 Mul128;
+struct Mul128 {
+  Uint64 z0;
+  Uint64 z1;
+};
+
+static Mul128 mul128(Uint64 a, Uint64 b) {
+  const Uint32 al = a;
+  const Uint32 ah = a >> 32;
+  const Uint32 bl = b;
+  const Uint32 bh = b >> 32;
+  Uint64 z0, z1;
+  Uint64 ma, mb;
+  z1 = (Uint64)al * bl;
+  ma = (Uint64)al * bh;
+  mb = (Uint64)ah * bl;
+  z0 = (Uint64)ah * bh;
+  ma += mb;
+  z0 += ((Uint64)(ma < mb) << 32) + (ma >> 32);
+  ma <<= 32;
+  z1 += ma;
+  z0 += z1 < ma;
+  return (Mul128){z0, z1};
 }
 
 // Take two double-precision float values, one which must be NaN, and produce
@@ -108,6 +141,11 @@ static Float64 float64_round_and_pack(Context *ctx, Flag sign, Sint32 exp, Uint6
 static inline Float64 float64_normalize_round_and_pack(Context *ctx, Flag sign, Sint16 exp, Uint64 sig) {
   const Sint8 shift = count_leading_zeros_u64(sig) - 1;
   return float64_round_and_pack(ctx, sign, exp - shift, sig << shift);
+}
+
+static inline Normal64 float64_normalize_subnormal(Uint64 sig) {
+  const Sint8 shift = count_leading_zeros_u64(sig) - 11;
+  return (Normal64){sig << shift, 1 - shift};
 }
 
 static Float64 float64_add_sig(Context *ctx, Float64 a, Float64 b, Flag sign) {
@@ -253,10 +291,61 @@ Float64 float64_sub(Context *ctx, Float64 a, Float64 b) {
 }
 
 Float64 float64_mul(Context *ctx, Float64 a, Float64 b) {
-  (void)ctx;
-  (void)a;
-  (void)b;
-  return FLOAT64_NAN;
+  Sint16 a_exp = float64_exp(a);
+  Sint16 b_exp = float64_exp(b);
+  Uint64 a_sig = float64_fract(a);
+  Uint64 b_sig = float64_fract(b);
+  Flag a_sign = float64_sign(a);
+  Flag b_sign = float64_sign(b);
+  Flag sign = a_sign ^ b_sign;
+  if (a_exp == 0x7ff) {
+    if (a_sig || (b_exp == 0x7ff && b_sig)) {
+      return float64_propagate_nan(ctx, a, b);
+    }
+    if ((b_exp | b_sig) == 0) {
+      context_raise(ctx, EXCEPTION_INVALID);
+      return FLOAT64_NAN;
+    }
+    return float64_pack(sign, 0x7ff, 0);
+  }
+  if (b_exp == 0x7ff) {
+    if (b_sig) {
+      return float64_propagate_nan(ctx, a, b);
+    }
+    if ((a_exp | a_sig) == 0) {
+      context_raise(ctx, EXCEPTION_INVALID);
+      return FLOAT64_NAN;
+    }
+    return float64_pack(sign, 0x7ff, 0);
+  }
+  if (a_exp == 0) {
+    if (a_sig == 0) {
+      return float64_pack(sign, 0, 0);
+    }
+    const Normal64 n = float64_normalize_subnormal(a_sig);
+    a_exp = n.exp;
+    a_sig = n.sig;
+  }
+  if (b_exp == 0) {
+    if (b_sig == 0) {
+      return float64_pack(sign, 0, 0);
+      const Normal64 n = float64_normalize_subnormal(b_sig);
+      b_exp = n.exp;
+      b_sig = n.sig;
+    }
+  }
+  Sint16 exp = a_exp + b_exp - 0x3ff;
+  a_sig = (a_sig | (Uint64)0x0010000000000000ull) << 10;
+  b_sig = (b_sig | (Uint64)0x0010000000000000ull) << 11;
+
+  // Compute with 128-bit mul, truncate to 64-bit.
+  Mul128 mul = mul128(a_sig, b_sig);
+  mul.z0 |= mul.z1 != 0;
+  if (0 <= (Sint64)(mul.z0 << 1)) {
+    mul.z0 <<= 1;
+    exp--;
+  }
+  return float64_round_and_pack(ctx, sign, exp, mul.z0);
 }
 
 Float64 float64_div(Context *ctx, Float64 a, Float64 b) {

@@ -126,7 +126,7 @@ static inline Float32 float32_normalize_round_and_pack(Context *ctx, Flag sign, 
 }
 
 static inline Normal32 float32_normalize_subnormal(Uint32 sig) {
-  Sint8 shift = count_leading_zeros_u32(sig) - 8;
+  const Sint8 shift = count_leading_zeros_u32(sig) - 8;
   return (Normal32){sig << shift, 1 - shift};
 }
 
@@ -321,8 +321,7 @@ Float32 float32_mul(Context *ctx, Float32 a, Float32 b) {
   Sint16 exp = a_exp + b_exp - 0x7f;
   a_sig = (a_sig | 0x00800000) << 7;
   b_sig = (b_sig | 0x00800000) << 8;
-  // Compute with 64-bit shift, truncate to 32-bit, since mul has higher
-  // internal precision than result.
+  // Compute with 64-bit mul, truncate to 32-bit.
   Uint32 sig = rshr64((Uint64)a_sig * b_sig, 32);
   if (0 <= (Sint32)(sig << 1)) {
     sig <<= 1;
