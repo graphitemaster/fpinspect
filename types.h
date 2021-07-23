@@ -18,4 +18,7 @@ typedef bool Bool;
 
 typedef size_t Size;
 
+#define LIT32(x) ((Uint32)x ## ul)
+#define LIT64(x) ((Uint64)x ## ull)
+
 #endif // TYPES_H

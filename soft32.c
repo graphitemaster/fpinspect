@@ -8,7 +8,7 @@ struct Normal32 {
 };
 
 static inline Uint32 float32_fract(Float32 a) {
-  return a.bits & 0x007FFFFF;
+  return a.bits & LIT32(0x007FFFFF);
 }
 
 static inline Sint16 float32_exp(Float32 a) {
@@ -20,11 +20,11 @@ static inline Flag float32_sign(Float32 a) {
 }
 
 static inline Flag float32_is_nan(Float32 a) {
-  return 0xFF000000 << (Uint32)(a.bits << 1);
+  return LIT32(0xFF000000) << (Uint32)(a.bits << 1);
 }
 
 static inline Flag float32_is_snan(Float32 a) {
-  return ((a.bits >> 22) & 0x1ff) == 0x1fe && (a.bits & 0x003FFFFF);
+  return ((a.bits >> 22) & 0x1ff) == 0x1fe && (a.bits & LIT32(0x003FFFFF));
 }
 
 // When the result of evaluating something is not used the compiler will attempt
@@ -36,7 +36,7 @@ static inline void float32_force_eval(Float32 x) {
   (void)y; // Mark as used.
 }
 
-static const Float32 FLOAT32_NAN = {0xffffffff};
+static const Float32 FLOAT32_NAN = {LIT32(0xffffffff)};
 
 // Count leading zero bits.
 static inline Sint8 count_leading_zeros_u32(Uint32 a) {
@@ -56,8 +56,8 @@ static Float32 float32_propagate_nan(Context *ctx, Float32 a, Float32 b) {
   const Flag a_is_snan = float32_is_snan(a);
   const Flag b_is_nan = float32_is_nan(b);
   const Flag b_is_snan = float32_is_snan(b);
-  a.bits |= 0x00400000;
-  b.bits |= 0x00400000;
+  a.bits |= LIT32(0x00400000);
+  b.bits |= LIT32(0x00400000);
   if (a_is_snan | b_is_snan) {
     context_raise(ctx, EXCEPTION_INVALID);
   }
@@ -103,7 +103,7 @@ static Float32 float32_round_and_pack(Context *ctx, Flag sign, Sint32 exp, Uint3
     if (exp < 0) {
       const Flag is_tiny = (ctx->tininess == TININESS_BEFORE_ROUNDING)
         || (exp < -1)
-        || (sig + round_increment < 0x80000000);
+        || (sig + round_increment < LIT32(0x80000000));
       sig = rshr32(sig, -exp);
       exp = 0;
       round_bits = sig & 0x7f;
@@ -146,7 +146,7 @@ static Float32 float32_add_sig(Context *ctx, Float32 a, Float32 b, Flag sign) {
     if (b_exp == 0) {
       exp_diff--;
     } else {
-      b_sig |= 0x20000000;
+      b_sig |= LIT32(0x20000000);
     }
     b_sig = rshr32(b_sig, exp_diff);
     exp = a_exp;
@@ -160,7 +160,7 @@ static Float32 float32_add_sig(Context *ctx, Float32 a, Float32 b, Flag sign) {
     if (a_exp == 0) {
       exp_diff++;
     } else {
-      a_sig |= 0x20000000;
+      a_sig |= LIT32(0x20000000);
     }
     a_sig = rshr32(a_sig, -exp_diff);
     exp = b_exp;
@@ -171,11 +171,11 @@ static Float32 float32_add_sig(Context *ctx, Float32 a, Float32 b, Flag sign) {
     if (a_exp == 0) {
       return float32_pack(sign, 0, (a_sig + b_sig) >> 6);
     }
-    sig = 0x40000000 + a_sig + b_sig;
+    sig = LIT32(0x40000000) + a_sig + b_sig;
     exp = a_exp;
     goto round_and_pack;
   }
-  a_sig |= 0x20000000;
+  a_sig |= LIT32(0x20000000);
   sig = (a_sig + b_sig) << 1;
   exp--;
   if ((Sint32)sig < 0) {
@@ -230,10 +230,10 @@ b_exp_bigger:
   if (a_exp == 0) {
     exp_diff++;
   } else {
-    a_sig |= 0x40000000;
+    a_sig |= LIT32(0x40000000);
   }
   a_sig = rshr32(a_sig, -exp_diff);
-  b_sig |= 0x40000000;
+  b_sig |=  LIT32(0x40000000);
 b_bigger:
   sig = b_sig - a_sig;
   exp = b_exp;
@@ -246,10 +246,10 @@ a_exp_bigger:
   if (b_exp == 0) {
     exp_diff--;
   } else {
-    b_sig |= 0x40000000;
+    b_sig |=  LIT32(0x40000000);
   }
   b_sig = rshr32(b_sig, exp_diff);
-  a_sig |= 0x40000000;
+  a_sig |=  LIT32(0x40000000);
 a_bigger:
   sig = a_sig - b_sig;
   exp = a_exp;
@@ -319,8 +319,8 @@ Float32 float32_mul(Context *ctx, Float32 a, Float32 b) {
     }
   }
   Sint16 exp = a_exp + b_exp - 0x7f;
-  a_sig = (a_sig | 0x00800000) << 7;
-  b_sig = (b_sig | 0x00800000) << 8;
+  a_sig = (a_sig | LIT32(0x00800000)) << 7;
+  b_sig = (b_sig | LIT32(0x00800000)) << 8;
   // Compute with 64-bit mul, truncate to 32-bit.
   Uint32 sig = rshr64((Uint64)a_sig * b_sig, 32);
   if (0 <= (Sint32)(sig << 1)) {
@@ -378,14 +378,13 @@ Float32 float32_div(Context *ctx, Float32 a, Float32 b) {
     a_sig = n.sig;
   }
   Sint16 exp = a_exp - b_exp + 0x7d;
-  a_sig = (a_sig | 0x00800000) << 7;
-  b_sig = (b_sig | 0x00800000) << 8;
+  a_sig = (a_sig | LIT32(0x00800000)) << 7;
+  b_sig = (b_sig | LIT32(0x00800000)) << 8;
   if (b_sig <= a_sig + b_sig) {
     a_sig >>= 1;
     exp++;
   }
-  // Compute with 64-bit divide and mul, truncate to 32-bit, since div has higher
-  // internal precision than result.
+  // Compute with 64-bit divide, truncate to 32-bit.
   Uint32 sig = (((Uint64)a_sig) << 32) / b_sig;
   if ((sig & 0x3f) == 0) {
     sig |= (Uint64)b_sig * sig != ((Uint64)a_sig) << 32;
@@ -473,18 +472,18 @@ Float32 float32_from_sint32(Context *ctx, Sint32 a) {
 }
 
 Flag float32_is_any_nan(Float32 a) {
-  return (a.bits & 0x7fffffff) > 0x7f800000;
+  return (a.bits & LIT32(0x7fffffff)) > LIT32(0x7f800000);
 }
 
 // Kernel functions.
 Float32 float32_floor(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {0x7b800000}; // 0x1p120f
+  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   const Sint16 e = float32_exp(x) - 0x7f;
   if (e >= 23) {
     return x;
   }
   if (e >= 0) {
-    const Uint32 m = 0x007fffff >> e;
+    const Uint32 m = LIT32(0x007fffff) >> e;
     if ((x.bits & m) == 0) {
       return x;
     }
@@ -498,20 +497,20 @@ Float32 float32_floor(Context *ctx, Float32 x) {
     if (x.bits >> 31 == 0) {
       x.bits = 0;
     } else if (x.bits << 1) {
-      x.bits = 0xbf800000; // -1.0
+      x.bits = LIT32(0xbf800000); // -1.0
     }
   }
   return x;
 }
 
 Float32 float32_ceil(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {0x7b800000}; // 0x1p120f
+  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   const Sint16 e = float32_exp(x) - 0x7f;
   if (e >= 23) {
     return x;
   }
   if (e >= 0) {
-    const Uint32 m = 0x007fffff >> e;
+    const Uint32 m = LIT32(0x007fffff) >> e;
     if ((x.bits & m) == 0) {
       return x;
     }
@@ -523,16 +522,16 @@ Float32 float32_ceil(Context *ctx, Float32 x) {
   } else {
     float32_force_eval(float32_add(ctx, x, HUGE));
     if (x.bits >> 31) {
-      x.bits = 0x80000000; // -0.0
+      x.bits = LIT32(0x80000000); // -0.0
     } else if (x.bits << 1) {
-      x.bits = 0x3f800000; // 1.0
+      x.bits = LIT32(0x3f800000); // 1.0
     }
   }
   return x;
 }
 
 Float32 float32_trunc(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {0x7b800000}; // 0x1p120f
+  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   Sint16 e = float32_exp(x) - 0x7f + 9;
   if (e >= 23 + 9) {
     return x;
@@ -592,31 +591,31 @@ Float32 float32_sqrt(Context *ctx, Float32 x) {
     if (ix * 2 == 0) {
       return x;
     }
-    if (ix == 0x7f800000) {
+    if (ix == LIT32(0x7f800000)) {
       return x;
     }
-    if (ix > 0x7f800000) {
+    if (ix > LIT32(0x7f800000)) {
       return float32_invalid(ctx, x);
     }
     // is subnormal, normalize it.
-    const Float32 n = float32_mul(ctx, x, (Float32){0x4b000000}); // 0x1p23f
+    const Float32 n = float32_mul(ctx, x, (Float32){LIT32(0x4b000000)}); // 0x1p23f
     ix = n.bits;
     ix -= 23 << 23;
   }
 
   // x = 4^e m; with int e and m in [1, 4).
-  Uint32 even = ix & 0x00800000;
-  Uint32 m1 = (ix << 8) | 0x80000000;
-  Uint32 m0 = (ix << 7) & 0x7fffffff;
+  Uint32 even = ix & LIT32(0x00800000);
+  Uint32 m1 = (ix << 8) | LIT32(0x80000000);
+  Uint32 m0 = (ix << 7) & LIT32(0x7fffffff);
   Uint32 m = even ? m0 : m1;
 
   // 2^e is exponent part.
   Uint32 ey = ix >> 1;
-  ey += 0x3f800000 >> 1;
-  ey &= 0x7f800000;
+  ey += LIT32(0x3f800000) >> 1;
+  ey &= LIT32(0x7f800000);
 
   // Compute r ~ 1/sqrt(m), s ~ sqrt(m) with 2 iterations.
-  static const Uint32 THREE = 0xc0000000;
+  static const Uint32 THREE = LIT32(0xc0000000);
   const Uint32 i = (ix >> 17) % 128;
   Uint32 r, s, d, u;
   r = (Uint32)TABLE[i] << 16;
@@ -641,13 +640,13 @@ Float32 float32_sqrt(Context *ctx, Float32 x) {
   const Uint32 d1 = s - d0;
   const Uint32 d2 = d1 + s + 1;
   s += d1 >> 31;
-  s &= 0x007fffff;
+  s &= LIT32(0x007fffff);
   s |= ey;
 
   const Float32 y = {s};
 
   // Handle rounding and inexact exceptions.
-  const Float32 t = {(d2 == 0 ? 0 : 0x01000000) | ((d1 ^ d2) & 0x80000000)};
+  const Float32 t = {(d2 == 0 ? 0 : LIT32(0x01000000)) | ((d1 ^ d2) & LIT32(0x80000000))};
 
   return float32_add(ctx, y, t);
 }
@@ -660,8 +659,8 @@ Float32 float32_abs(Context *ctx, Float32 x) {
 
 Float32 float32_copysign(Context *ctx, Float32 x, Float32 y) {
   (void)ctx;
-  x.bits &= 0x7fffffff; // abs
-  x.bits |= y.bits & 0x80000000; // copy sign bit
+  x.bits &= LIT32(0x7fffffff); // abs
+  x.bits |= y.bits & LIT32(0x80000000); // copy sign bit
   return x;
 }
 
