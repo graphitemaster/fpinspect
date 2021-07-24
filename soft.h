@@ -81,6 +81,7 @@ struct Context {
 
 void context_init(Context* context);
 void context_free(Context* context);
+void context_copy(Context* dst, const Context *src);
 bool context_raise(Context *context, Exception exception);
 
 // Special right shifts where the least significant bit of result is set when

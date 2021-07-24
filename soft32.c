@@ -152,7 +152,6 @@ static Float32 float32_add_sig(Context *ctx, Float32 a, Float32 b, Flag sign) {
     sig = a_sig + b_sig;
     exp++;
   }
-
 round_and_pack:
   return float32_round_and_pack(ctx, sign, exp, sig);
 }
@@ -354,7 +353,7 @@ Float32 float32_div(Context *ctx, Float32 a, Float32 b) {
   Sint16 exp = a_exp - b_exp + 0x7d;
   a_sig = (a_sig | LIT32(0x00800000)) << 7;
   b_sig = (b_sig | LIT32(0x00800000)) << 8;
-  if (b_sig <= a_sig + b_sig) {
+  if (b_sig <= a_sig + a_sig) {
     a_sig >>= 1;
     exp++;
   }

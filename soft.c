@@ -12,6 +12,12 @@ void context_free(Context* context) {
   array_free(context->operations);
 }
 
+void context_copy(Context* dst, const Context *src) {
+  context_init(dst);
+  dst->round = src->round;
+  dst->tininess = src->tininess;
+}
+
 bool context_raise(Context *context, Exception exception) {
   return array_push(context->exceptions, exception);
 }

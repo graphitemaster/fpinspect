@@ -351,7 +351,7 @@ Float64 float64_div(Context *ctx, Float64 a, Float64 b) {
   Sint16 exp = a_exp - b_exp + 0x7d;
   a_sig = (a_sig | LIT64(0x0010000000000000)) << 10;
   b_sig = (b_sig | LIT64(0x0010000000000000)) << 11;
-  if (b_sig <= a_sig + b_sig) {
+  if (b_sig <= a_sig + a_sig) {
     a_sig >>= 1;
     exp++;
   }

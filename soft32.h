@@ -31,6 +31,8 @@ static inline Float32 float32_pack(Flag sign, Sint16 exp, Uint32 sig) {
   return (Float32){(((Uint32)sign) << 31) + (((Uint32)exp) << 23) + sig};
 }
 
+static const Float32 FLOAT32_EPSILON = {LIT32(0x34000000)}; // 0x0.000002p0
+
 // Conversion of float32 NaN to CanonicalNaN format.
 CanonicalNaN float32_to_canonical_nan(Context*, Float32);
 
