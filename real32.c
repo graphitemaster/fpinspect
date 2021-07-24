@@ -114,18 +114,17 @@ Real32 real32_div(Context *ctx, Real32 a, Real32 b) {
 
 Real32 real32_sqrt(Context *ctx, Real32 x) {
   Context ec = eps_ctx(ctx);
-  Real32 result;
 
   // Calculate error.
   Float32 d;
   // Assume non-negative input.
   if (float32_gte(&ec, x.value, FLOAT32_ZERO)) {
-    Float32 r = float32_sqrt(&ec, x.value);
+    const Float32 r = float32_sqrt(&ec, x.value);
     // if x > 10.0 * err(x)
     const Float32 err = float32_mul(&ec, float32_from_sint32(&ec, 10), x.eps);
     if (float32_gt(&ec, x.value, err)) {
       // 0.5 * (err(x) / r)
-      d = float32_mul(&ec, FLOAT32_HALF, float32_div(&ec, x.eps, result.value));
+      d = float32_mul(&ec, FLOAT32_HALF, float32_div(&ec, x.eps, r));
     } else {
       // if x > err(x)
       if (float32_gt(&ec, x.value, x.eps)) {
