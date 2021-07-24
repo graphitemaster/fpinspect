@@ -249,55 +249,54 @@ Float32 float32_mul(Context *ctx, Float32 a, Float32 b) {
   Sint16 b_exp = float32_exp(b);
   Uint32 a_sig = float32_fract(a);
   Uint32 b_sig = float32_fract(b);
-  Flag a_sign = float32_sign(a);
-  Flag b_sign = float32_sign(b);
-  Flag sign = a_sign ^ b_sign;
+  const Flag a_sign = float32_sign(a);
+  const Flag b_sign = float32_sign(b);
+  const Flag sign = a_sign ^ b_sign;
+  Uint32 mag_bits = 0;
   if (a_exp == 0xff) {
-    if (a_sig || (b_exp == 0xff && b_sig)) {
-      return float32_propagate_nan(ctx, a, b);
-    }
-    if ((b_exp | b_sig) == 0) {
-      context_raise(ctx, EXCEPTION_INVALID);
-      return FLOAT32_NAN;
-    }
-    return float32_pack(sign, 0xff, 0);
+    if (a_sig || (b_exp == 0xff && b_sig)) goto propagate_nan;
+    mag_bits = b_exp | b_sig;
+    goto infinity;
   }
   if (b_exp == 0xff) {
-    if (b_sig) {
-      return float32_propagate_nan(ctx, a, b);
-    }
-    if ((a_exp | a_sig) == 0) {
-      context_raise(ctx, EXCEPTION_INVALID);
-      return FLOAT32_NAN;
-    }
-    return float32_pack(sign, 0xff, 0);
+    if (b_sig) goto propagate_nan;
+    mag_bits = a_exp | a_sig;
+    goto infinity;
   }
   if (a_exp == 0) {
-    if (a_sig == 0) {
-      return float32_pack(sign, 0, 0);
-    }
+    if (a_sig == 0) goto zero;
     const Normal32 n = float32_normalize_subnormal(a_sig);
     a_exp = n.exp;
     a_sig = n.sig;
   }
   if (b_exp == 0) {
-    if (b_sig == 0) {
-      return float32_pack(sign, 0, 0);
-      const Normal32 n = float32_normalize_subnormal(b_sig);
-      b_exp = n.exp;
-      b_sig = n.sig;
-    }
+    if (b_sig == 0) goto zero;
+    const Normal32 n = float32_normalize_subnormal(b_sig);
+    b_exp = n.exp;
+    b_sig = n.sig;
   }
   Sint16 exp = a_exp + b_exp - 0x7f;
   a_sig = (a_sig | LIT32(0x00800000)) << 7;
   b_sig = (b_sig | LIT32(0x00800000)) << 8;
+
   // Compute with 64-bit mul, truncate to 32-bit.
   Uint32 sig = rshr64((Uint64)a_sig * b_sig, 32);
-  if (0 <= (Sint32)(sig << 1)) {
-    sig <<= 1;
+  if (sig < LIT32(0x40000000)) {
     exp--;
+    sig <<= 1;
   }
   return float32_round_and_pack(ctx, sign, exp, sig);
+propagate_nan:
+  return float32_propagate_nan(ctx, a, b);
+infinity:
+  if (!mag_bits) {
+    context_raise(ctx, EXCEPTION_INVALID);
+    return FLOAT32_NAN;
+  } else {
+    return float32_pack(sign, 0xff, 0);
+  }
+zero:
+  return float32_pack(sign, 0, 0);
 }
 
 Float32 float32_div(Context *ctx, Float32 a, Float32 b) {
@@ -306,61 +305,62 @@ Float32 float32_div(Context *ctx, Float32 a, Float32 b) {
   Sint16 b_exp = float32_exp(b);
   Uint32 a_sig = float32_fract(a);
   Uint32 b_sig = float32_fract(b);
-  Flag a_sign = float32_sign(a);
-  Flag b_sign = float32_sign(b);
-  Flag sign = a_sign ^ b_sign;
+  const Flag a_sign = float32_sign(a);
+  const Flag b_sign = float32_sign(b);
+  const Flag sign = a_sign ^ b_sign;
   if (a_exp == 0xff) {
-    if (a_sig) {
-      return float32_propagate_nan(ctx, a, b);
-    }
+    if (a_sig) goto propagate_nan;
     if (b_exp == 0xff) {
-      if (b_sig) {
-        return float32_propagate_nan(ctx, a, b);
-      }
-      context_raise(ctx, EXCEPTION_INVALID);
-      return FLOAT32_NAN;
+      if (b_sig) goto propagate_nan;
+      goto invalid;
     }
-    return float32_pack(sign, 0xff, 0);
+    goto infinity;
   }
   if (b_exp == 0xff) {
-    return b_sig
-      ? float32_propagate_nan(ctx, a, b)
-      : float32_pack(sign, 0, 0);
+    if (b_sig) goto propagate_nan;
+    goto zero;
   }
   if (b_exp == 0) {
     if (b_sig == 0) {
-      if ((a_exp | a_sig) == 0) {
-        context_raise(ctx, EXCEPTION_INVALID);
-        return FLOAT32_NAN;
-      }
-      context_raise(ctx, EXCEPTION_DIVIDE_BY_ZERO);
-      return float32_pack(sign, 0xff, 0);
+      if ((a_exp | a_sig) == 0) goto invalid;
+      context_raise(ctx, EXCEPTION_INFINITE);
+      goto infinity;
     }
     const Normal32 n = float32_normalize_subnormal(b_sig);
     b_exp = n.exp;
     b_sig = n.sig;
   }
   if (a_exp == 0) {
-    if (a_sig == 0) {
-      return float32_pack(sign, 0, 0);
-    }
+    if (a_sig == 0) goto zero;
     const Normal32 n = float32_normalize_subnormal(a_sig);
     a_exp = n.exp;
     a_sig = n.sig;
   }
-  Sint16 exp = a_exp - b_exp + 0x7d;
-  a_sig = (a_sig | LIT32(0x00800000)) << 7;
-  b_sig = (b_sig | LIT32(0x00800000)) << 8;
-  if (b_sig <= a_sig + a_sig) {
-    a_sig >>= 1;
-    exp++;
+  Sint16 exp = a_exp - b_exp + 0x7e;
+  a_sig = (a_sig | LIT32(0x00800000));
+  b_sig = (b_sig | LIT32(0x00800000));
+  // Use 64-bit divide for 32-bit significand.
+  Uint64 a_sig_64;
+  if (a_sig < b_sig) {
+    exp--;
+    a_sig_64 = (Uint64)a_sig << 31;
+  } else {
+    a_sig_64 = (Uint64)a_sig << 30;
   }
-  // Compute with 64-bit divide, truncate to 32-bit.
-  Uint32 sig = (((Uint64)a_sig) << 32) / b_sig;
-  if ((sig & 0x3f) == 0) {
-    sig |= (Uint64)b_sig * sig != ((Uint64)a_sig) << 32;
+  Uint32 sig = a_sig_64 / b_sig;
+  if (!(sig & 0x3f)) {
+    sig |= ((Uint64)b_sig * sig != a_sig_64);
   }
   return float32_round_and_pack(ctx, sign, exp, sig);
+propagate_nan:
+  return float32_propagate_nan(ctx, a, b);
+invalid:
+  context_raise(ctx, EXCEPTION_INVALID);
+  return FLOAT32_NAN;
+infinity:
+  return float32_pack(sign, 0xff, 0);
+zero:
+  return float32_pack(sign, 0, 0);
 }
 
 // a == b

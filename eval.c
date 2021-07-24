@@ -40,9 +40,11 @@ static const struct {
   const char *identifier;
   const Real32 value;
 } CONSTANTS[] = {
-  { "e",   {{LIT32(0x402df854)}, {0}} },
-  { "pi",  {{LIT32(0x40490fdb)}, {0}} },
-  { "phi", {{LIT32(0x3fcf1bbd)}, {0}} }
+  { "e",    {{LIT32(0x402df854)}, {0}} },
+  { "pi",   {{LIT32(0x40490fdb)}, {0}} },
+  { "phi",  {{LIT32(0x3fcf1bbd)}, {0}} },
+  { "fmin", {{LIT32(0x00800000)}, {0}} }, // FLT_MIN
+  { "fmax", {{LIT32(0x7f7fffff)}, {0}} }, // FLT_MAX
 };
 
 static const struct {
@@ -218,11 +220,8 @@ Real32 expr_eval32(Context *ctx, Expression *expression) {
     if (exception & EXCEPTION_INVALID) {
       fprintf(stderr, "%sINVALID", flag ? "|" : ""), flag = true;
     }
-    if (exception & EXCEPTION_DENORMAL) {
-      fprintf(stderr, "%sDENORMAL", flag ? "|" : ""), flag = true;
-    }
-    if (exception & EXCEPTION_DIVIDE_BY_ZERO) {
-      fprintf(stderr, "%sDIVBYZERO", flag ? "|" : ""), flag = true;
+    if (exception & EXCEPTION_INFINITE) {
+      fprintf(stderr, "%sINFINITE", flag ? "|" : ""), flag = true;
     }
     if (exception & EXCEPTION_OVERFLOW) {
       fprintf(stderr, "%sOVERFLOW", flag ? "|" : ""), flag = true;

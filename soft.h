@@ -51,12 +51,11 @@ enum Round {
 };
 
 enum Exception {
-  EXCEPTION_INVALID        = 1 << 0,
-  EXCEPTION_DENORMAL       = 1 << 1,
-  EXCEPTION_DIVIDE_BY_ZERO = 1 << 2,
-  EXCEPTION_OVERFLOW       = 1 << 3,
-  EXCEPTION_UNDERFLOW      = 1 << 4,
-  EXCEPTION_INEXACT        = 1 << 5
+  EXCEPTION_INEXACT    = 1 << 0,
+  EXCEPTION_UNDERFLOW  = 1 << 1,
+  EXCEPTION_OVERFLOW   = 1 << 2,
+  EXCEPTION_INFINITE   = 1 << 3,
+  EXCEPTION_INVALID    = 1 << 4
 };
 
 enum Tininess {

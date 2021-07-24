@@ -331,7 +331,7 @@ Float64 float64_div(Context *ctx, Float64 a, Float64 b) {
         context_raise(ctx, EXCEPTION_INVALID);
         return FLOAT64_NAN;
       }
-      context_raise(ctx, EXCEPTION_DIVIDE_BY_ZERO);
+      context_raise(ctx, EXCEPTION_INFINITE);
       return float64_pack(sign, 0xff, 0);
     }
     const Normal64 n = float64_normalize_subnormal(b_sig);
