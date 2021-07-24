@@ -229,6 +229,7 @@ normalize_round_and_pack:
 }
 
 Float32 float32_add(Context *ctx, Float32 a, Float32 b) {
+  array_push(ctx->operations, OPERATION_ADD);
   const Flag a_sign = float32_sign(a);
   const Flag b_sign = float32_sign(b);
   return a_sign == b_sign
@@ -237,6 +238,7 @@ Float32 float32_add(Context *ctx, Float32 a, Float32 b) {
 }
 
 Float32 float32_sub(Context *ctx, Float32 a, Float32 b) {
+  array_push(ctx->operations, OPERATION_SUB);
   const Flag a_sign = float32_sign(a);
   const Flag b_sign = float32_sign(b);
   return a_sign == b_sign
@@ -245,6 +247,7 @@ Float32 float32_sub(Context *ctx, Float32 a, Float32 b) {
 }
 
 Float32 float32_mul(Context *ctx, Float32 a, Float32 b) {
+  array_push(ctx->operations, OPERATION_MUL);
   Sint16 a_exp = float32_exp(a);
   Sint16 b_exp = float32_exp(b);
   Uint32 a_sig = float32_fract(a);
@@ -301,6 +304,7 @@ Float32 float32_mul(Context *ctx, Float32 a, Float32 b) {
 }
 
 Float32 float32_div(Context *ctx, Float32 a, Float32 b) {
+  array_push(ctx->operations, OPERATION_DIV);
   Sint16 a_exp = float32_exp(a);
   Sint16 b_exp = float32_exp(b);
   Uint32 a_sig = float32_fract(a);

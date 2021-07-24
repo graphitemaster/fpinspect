@@ -3,11 +3,13 @@
 
 void context_init(Context* context) {
   context->exceptions = NULL;
+  context->operations = NULL;
   context->roundings = 0;
 }
 
 void context_free(Context* context) {
   array_free(context->exceptions);
+  array_free(context->operations);
 }
 
 bool context_raise(Context *context, Exception exception) {

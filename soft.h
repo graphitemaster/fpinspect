@@ -7,6 +7,7 @@ typedef Sint8 Flag;
 typedef enum Round Round;
 typedef enum Exception Exception;
 typedef enum Tininess Tininess;
+typedef enum Operation Operation;
 
 typedef struct Context Context;
 
@@ -63,10 +64,18 @@ enum Tininess {
   TININESS_BEFORE_ROUNDING
 };
 
+enum Operation {
+  OPERATION_ADD,
+  OPERATION_SUB,
+  OPERATION_MUL,
+  OPERATION_DIV
+};
+
 struct Context {
   Round round;
   Size roundings;
-  ARRAY(Exception) exceptions;
+  ARRAY(Exception) exceptions; ///< Array of flags of triggered exceptions.
+  ARRAY(Operation) operations; ///< Array of all operations carried out 
   Tininess tininess;
 };
 

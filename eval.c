@@ -218,7 +218,9 @@ Float32 expr_eval32(Context *ctx, Expression *expression) {
   break; case EXPR_LAST:  result = ZERO32;
   }
 
+  Size n_operations = array_size(ctx->operations);
   Size n_exceptions = array_size(ctx->exceptions);
+
   for (Size i = 0; i < n_exceptions; i++) {
     Exception exception = ctx->exceptions[i];
     fprintf(stderr, "Exception: %zu (%zu roundings) ", i, ctx->roundings);
@@ -245,7 +247,19 @@ Float32 expr_eval32(Context *ctx, Expression *expression) {
     expr_print(stderr, expression);
     fprintf(stderr, "\n");
   }
-  if (n_exceptions) {
+  if (n_operations && n_exceptions) {
+    fprintf(stderr, "  Trace (%zu operations) ", n_operations);
+    Bool hit = false;
+    for (Size i = 0; i < n_operations; i++) {
+      Operation operation = ctx->operations[i];
+      switch (operation) {
+      case OPERATION_ADD: fprintf(stderr, "%sADD", hit ? " " : ""), hit = true; break;
+      case OPERATION_SUB: fprintf(stderr, "%sSUB", hit ? " " : ""), hit = true; break;
+      case OPERATION_MUL: fprintf(stderr, "%sMUL", hit ? " " : ""), hit = true; break;
+      case OPERATION_DIV: fprintf(stderr, "%sDIV", hit ? " " : ""), hit = true; break;
+      }
+    }
+    fprintf(stderr, "\n");
     fprintf(stderr, "\n");
   }
 
