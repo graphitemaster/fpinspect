@@ -32,10 +32,12 @@ static inline Float32 float32_pack(Flag sign, Sint16 exp, Uint32 sig) {
 }
 
 // Common constants.
-static const Float32 FLOAT32_NAN = {LIT32(0xffffffff)};
-static const Float32 FLOAT32_EPSILON = {LIT32(0x34000000)}; // 0x0.000002p0
-static const Float32 FLOAT32_ZERO = {0}; // 0x0p+0
-static const Float32 FLOAT32_ONE = {LIT32(0x3f800000)}; // 0x1p+0
+#define FLOAT32_NAN        (Float32){LIT32(0xffffffff)} //  NaN
+#define FLOAT32_EPSILON    (Float32){LIT32(0x34000000)} //  0x0.000002p0
+#define FLOAT32_ZERO       (Float32){LIT32(0x00000000)} //  0.0
+#define FLOAT32_HALF       (Float32){LIT32(0x3f000000)} //  0.5
+#define FLOAT32_ONE        (Float32){LIT32(0x3f800000)} //  1.0
+#define FLOAT32_MINUS_ONE  (Float32){LIT32(0xbf800000)} // -1.0
 
 // Conversion of float32 NaN to CanonicalNaN format.
 CanonicalNaN float32_to_canonical_nan(Context*, Float32);

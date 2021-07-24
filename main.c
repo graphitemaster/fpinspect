@@ -61,9 +61,11 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  const Float32 result = expr_eval32(&c, e);
+  const Real32 result = expr_eval32(&c, e);
   expr_print(stdout, e);
-  printf("\n\t= %.*f\n", DBL_DIG - 1, float32_cast(result));
+  printf("\n\tans: %.*f\n\terr: %.*f\n",
+    DBL_DIG - 1, float32_cast(result.value),
+    DBL_DIG - 1, float32_cast(result.eps));
   expr_free(e);
 
   context_free(&c);

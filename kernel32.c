@@ -1,6 +1,6 @@
 #include "kernel32.h"
-#include "float64.h"
 
+static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
 // When the result of evaluating something is not used the compiler will attempt
 // to remove that dead code, even though in this case we want the evaluation
 // of some expressions to happen to trigger exceptions.
@@ -11,7 +11,6 @@ static inline void float32_force_eval(Float32 x) {
 }
 
 Float32 float32_floor(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   const Sint16 e = float32_exp(x) - 0x7f;
   if (e >= 23) {
     return x;
@@ -38,7 +37,6 @@ Float32 float32_floor(Context *ctx, Float32 x) {
 }
 
 Float32 float32_ceil(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   const Sint16 e = float32_exp(x) - 0x7f;
   if (e >= 23) {
     return x;
@@ -65,7 +63,6 @@ Float32 float32_ceil(Context *ctx, Float32 x) {
 }
 
 Float32 float32_trunc(Context *ctx, Float32 x) {
-  static const Float32 HUGE = {LIT32(0x7b800000)}; // 0x1p120f
   Sint16 e = float32_exp(x) - 0x7f + 9;
   if (e >= 23 + 9) {
     return x;
@@ -233,26 +230,4 @@ Float32 float32_min(Context *ctx, Float32 x, Float32 y) {
   }
 
   return float32_lt(ctx, x, y) ? x : y;
-}
-
-Float32 float32_cosd(Context *ctx, Float64 x) {
-  static const Float64 C0 = {LIT64(0xbfdffffffd0c5e81)};
-  static const Float64 C1 = {LIT64(0x3fa55553e1053a42)};
-  static const Float64 C2 = {LIT64(0xbf56c087e80f1e27)};
-  static const Float64 C3 = {LIT64(0x3ef99342e0ee5069)};
-
-  Float64 z = float64_mul(ctx, x, x);
-  Float64 w = float64_mul(ctx, z, z);
-  Float64 r = float64_add(ctx, C2, float64_mul(ctx, z, C3));
-
-  // ((1.0+(z*C0)) + (w*C1)) + ((w*z)*r)
-  return float64_to_float32(
-    ctx,
-    float64_add(ctx,
-      float64_add(ctx,
-        float64_add(ctx,
-          (Float64){LIT64(0x3ff0000000000000)},
-          float64_mul(ctx, z, C0)),
-        float64_mul(ctx, w, C1)),
-      float64_mul(ctx, float64_mul(ctx, w, z), r)));
 }

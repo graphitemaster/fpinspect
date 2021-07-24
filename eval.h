@@ -1,13 +1,11 @@
 #ifndef EVAL_H
 #define EVAL_H
-#include "float32.h"
-#include "float64.h"
+#include "real32.h"
 
 typedef struct Expression Expression;
 
 Bool expr_parse(Expression**, const char*);
-Float32 expr_eval32(Context*, Expression*);
-Float64 expr_eval64(Context*, Expression*);
+Real32 expr_eval32(Context*, Expression*);
 void expr_free(Expression*);
 void expr_print(FILE*, Expression*);
 

@@ -3,7 +3,6 @@
 #include <stdio.h> // fprintf, stderr
 
 #include "eval.h"
-#include "kernel32.h"
 
 typedef struct Parser Parser;
 typedef struct Expression Expression;
@@ -18,7 +17,7 @@ struct Expression {
     EXPR_ADD, EXPR_SUB, EXPR_MUL, EXPR_DIV,
     EXPR_LAST
   } type;
-  Float32 value;
+  Real32 value;
   union {
     Size constant;
     enum {
@@ -28,7 +27,6 @@ struct Expression {
       FUNC_TRUNC,
       FUNC_SQRT,
       FUNC_ABS,
-      FUNC_COSD,
       // EXPR_FUNC2
       FUNC_MIN,
       FUNC_MAX,
@@ -40,11 +38,11 @@ struct Expression {
 
 static const struct {
   const char *identifier;
-  const Float32 value;
+  const Real32 value;
 } CONSTANTS[] = {
-  { "e",   {0x402df854} },
-  { "pi",  {0x40490fdb} },
-  { "phi", {0x3fcf1bbd} }
+  { "e",   {{LIT32(0x402df854)}, {0}} },
+  { "pi",  {{LIT32(0x40490fdb)}, {0}} },
+  { "phi", {{LIT32(0x3fcf1bbd)}, {0}} }
 };
 
 static const struct {
@@ -55,8 +53,7 @@ static const struct {
   { "ceil",  FUNC_CEIL  },
   { "trunc", FUNC_TRUNC },
   { "sqrt",  FUNC_SQRT  },
-  { "abs",   FUNC_ABS   },
-  { "cosd",  FUNC_COSD  }
+  { "abs",   FUNC_ABS   }
 };
 
 static const struct {
@@ -90,9 +87,9 @@ static const char *func2_name(Uint32 func) {
 }
 
 // This is cheating for now until we implement an accurate strtof, strtod, etc.
-static Float32 float32_from_string(const char *string, char **next) {
+static Real32 real32_from_string(const char *string, char **next) {
   union { float f; Float32 s; } u = {strtof(string, next)};
-  return u.s;
+  return (Real32){u.s, {0}};
 }
 
 static Bool is_identifier(int ch) {
@@ -128,7 +125,7 @@ struct Parser {
 void expr_print(FILE *fp, Expression *expression) {
   switch (expression->type) {
   case EXPR_VALUE:
-    fprintf(fp, "%f", float32_cast(expression->value));
+    fprintf(fp, "%f", float32_cast(expression->value.value));
     break;
   case EXPR_CONST:
     fprintf(fp, "%s", CONSTANTS[expression->constant].identifier);
@@ -154,62 +151,59 @@ void expr_print(FILE *fp, Expression *expression) {
   }
 }
 
-static Float32 eval_func1_32(Context *ctx, Uint32 func, Float32 a) {
+static Real32 eval_func1_32(Context *ctx, Uint32 func, Real32 a) {
   switch (func) {
   case FUNC_FLOOR:
-    return float32_floor(ctx, a);
+    return real32_floor(ctx, a);
   case FUNC_CEIL:
-    return float32_ceil(ctx, a);
+    return real32_ceil(ctx, a);
   case FUNC_TRUNC:
-    return float32_trunc(ctx, a);
+    return real32_trunc(ctx, a);
   case FUNC_SQRT:
-    return float32_sqrt(ctx, a);
+    return real32_sqrt(ctx, a);
   case FUNC_ABS:
-    return float32_abs(ctx, a);
-  case FUNC_COSD:
-    // TODO(dweiler): remove, just for testing.
-    return float32_cosd(ctx, float32_to_float64(ctx, a));
+    return real32_abs(ctx, a);
   }
-  return FLOAT32_ZERO;
+  return (Real32){FLOAT32_ZERO, {0}};
 }
 
-static Float32 eval_func2_32(Context *ctx, Uint32 func, Float32 a, Float32 b) {
+static Real32 eval_func2_32(Context *ctx, Uint32 func, Real32 a, Real32 b) {
   switch (func) {
   case FUNC_MIN:
-    return float32_min(ctx, a, b);
+    return real32_min(ctx, a, b);
   case FUNC_MAX:
-    return float32_max(ctx, a, b);
+    return real32_max(ctx, a, b);
   case FUNC_COPYSIGN:
-    return float32_copysign(ctx, a, b);
+    return real32_copysign(ctx, a, b);
   }
-  return FLOAT32_ZERO;
+  return (Real32){FLOAT32_ZERO, {0}};
 }
 
-Float32 expr_eval32(Context *ctx, Expression *expression) {
+Real32 expr_eval32(Context *ctx, Expression *expression) {
   if (!expression) {
-    return FLOAT32_ZERO;
+    return REAL32_ZERO;
   }
 
-  Float32 a = expr_eval32(ctx, expression->params[0]);
-  Float32 b = expr_eval32(ctx, expression->params[1]);
+  Real32 a = expr_eval32(ctx, expression->params[0]);
+  Real32 b = expr_eval32(ctx, expression->params[1]);
 
-  Float32 result = FLOAT32_ZERO;
+  Real32 result = REAL32_ZERO;
 
   switch (expression->type) {
   /****/ case EXPR_VALUE: result = expression->value;
   break; case EXPR_CONST: result = CONSTANTS[expression->constant].value;
   break; case EXPR_FUNC1: result = eval_func1_32(ctx, expression->func, a);
   break; case EXPR_FUNC2: result = eval_func2_32(ctx, expression->func, a, b);
-  break; case EXPR_EQ:    result = float32_eq(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_LTE:   result = float32_lte(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_LT:    result = float32_lt(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_NE:    result = float32_ne(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_GTE:   result = float32_gte(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_GT:    result = float32_gt(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
-  break; case EXPR_ADD:   result = float32_add(ctx, a, b);
-  break; case EXPR_SUB:   result = float32_sub(ctx, a, b);
-  break; case EXPR_MUL:   result = float32_mul(ctx, a, b);
-  break; case EXPR_DIV:   result = float32_div(ctx, a, b);
+  break; case EXPR_EQ:    result = real32_eq(ctx, a, b);
+  break; case EXPR_LTE:   result = real32_lte(ctx, a, b);
+  break; case EXPR_LT:    result = real32_lt(ctx, a, b);
+  break; case EXPR_NE:    result = real32_ne(ctx, a, b);
+  break; case EXPR_GTE:   result = real32_gte(ctx, a, b);
+  break; case EXPR_GT:    result = real32_gt(ctx, a, b);
+  break; case EXPR_ADD:   result = real32_add(ctx, a, b);
+  break; case EXPR_SUB:   result = real32_sub(ctx, a, b);
+  break; case EXPR_MUL:   result = real32_mul(ctx, a, b);
+  break; case EXPR_DIV:   result = real32_div(ctx, a, b);
   break; case EXPR_LAST:  // Empty.
   break;
   }
@@ -262,30 +256,13 @@ Float32 expr_eval32(Context *ctx, Expression *expression) {
   return result;
 }
 
-Float64 expr_eval64(Context *ctx, Expression *expression) {
-  if (!expression) {
-    return FLOAT64_ZERO;
-  }
-
-  Float64 a = expr_eval64(ctx, expression->params[0]);
-  Float64 b = expr_eval64(ctx, expression->params[1]);
-
-  // TODO.
-  (void)a;
-  (void)b;
-
-  Float64 result = FLOAT64_ZERO;
-
-  return result;
-}
-
 static Expression *create(int type, Expression *e0, Expression *e1) {
   Expression *e = calloc(1, sizeof *e);
   if (!e) {
     return NULL;
   }
   e->type = type;
-  e->value = FLOAT32_ONE;
+  e->value = REAL32_ONE;
   e->params[0] = e0;
   e->params[1] = e1;
   return e;
@@ -300,7 +277,7 @@ static Bool parse_primary(Expression **e, Parser *p, Flag sign) {
 
   char *next = p->s;
   char *s0 = p->s;
-  d->value = float32_from_string(sign ? p->s - 1 : p->s, &next);
+  d->value = real32_from_string(sign ? p->s - 1 : p->s, &next);
   if (next != p->s) {
     d->type = EXPR_VALUE;
     p->s = next;
@@ -308,7 +285,7 @@ static Bool parse_primary(Expression **e, Parser *p, Flag sign) {
     return true;
   }
 
-  d->value = FLOAT32_ONE;
+  d->value = REAL32_ONE;
 
   for (Size i = 0; i < sizeof CONSTANTS / sizeof *CONSTANTS; i++) {
     if (!match(p->s, CONSTANTS[i].identifier)) {
