@@ -3,6 +3,7 @@
 #include <stdio.h> // fprintf, stderr
 
 #include "eval.h"
+#include "kernel32.h"
 
 typedef struct Parser Parser;
 typedef struct Expression Expression;
@@ -27,6 +28,7 @@ struct Expression {
       FUNC_TRUNC,
       FUNC_SQRT,
       FUNC_ABS,
+      FUNC_COSD,
       // EXPR_FUNC2
       FUNC_MIN,
       FUNC_MAX,
@@ -54,6 +56,7 @@ static const struct {
   { "trunc", FUNC_TRUNC },
   { "sqrt",  FUNC_SQRT  },
   { "abs",   FUNC_ABS   },
+  { "cosd",  FUNC_COSD  }
 };
 
 static const struct {
@@ -159,7 +162,7 @@ void expr_print(FILE *fp, Expression *expression) {
 static Float32 eval_func1_32(Context *ctx, Uint32 func, Float32 a) {
   switch (func) {
   case FUNC_FLOOR:
-    return float32_abs(ctx, a);
+    return float32_floor(ctx, a);
   case FUNC_CEIL:
     return float32_ceil(ctx, a);
   case FUNC_TRUNC:
@@ -168,6 +171,9 @@ static Float32 eval_func1_32(Context *ctx, Uint32 func, Float32 a) {
     return float32_sqrt(ctx, a);
   case FUNC_ABS:
     return float32_abs(ctx, a);
+  case FUNC_COSD:
+    // TODO(dweiler): remove, just for testing.
+    return float32_cosd(ctx, float32_to_float64(ctx, a));
   }
   return ZERO32;
 }

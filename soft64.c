@@ -1,44 +1,11 @@
 #include "soft64.h"
 #include "uint128.h"
 
-typedef struct Normal64 Normal64;
-
-struct Normal64 {
-  Uint64 sig;
-  Sint16 exp;
-};
-
-static inline Uint64 float64_fract(Float64 a) {
-  return a.bits & LIT64(0x000FFFFFFFFFFFFF);
-}
-
-static inline Sint16 float64_exp(Float64 a) {
-  return (a.bits >> 52) & 0x7ff;
-}
-
-static inline Flag float64_sign(Float64 a) {
-  return a.bits >> 63;
-}
-
-static inline Flag float64_is_nan(Float64 a) {
-  return LIT64(0xFFE0000000000000) < (Uint64)(a.bits << 1);
-}
-
-static inline Flag float64_is_snan(Float64 a) {
-  return (((a.bits >> 51) & 0xfff) == 0xffe)
-    && (a.bits & LIT64(0x0007ffffffffffff));
-}
-
 static const Float64 FLOAT64_NAN = {LIT64(0xffffffffffffffff)};
 
 // Count leading zero bits.
 static inline Sint8 count_leading_zeros_u64(Uint64 a) {
   return a == 0 ? 64 : __builtin_clzl(a);
-}
-
-// Pack sign sign, exponent, and significant into single-precision float.
-static inline Float64 float64_pack(Flag sign, Sint16 exp, Uint64 sig) {
-  return (Float64){(((Uint64)sign) << 63) + (((Uint64)exp) << 52) + sig};
 }
 
 // Take two double-precision float values, one which must be NaN, and produce
@@ -60,7 +27,18 @@ static Float64 float64_propagate_nan(Context *ctx, Float64 a, Float64 b) {
   return b;
 }
 
-static Float64 float64_round_and_pack(Context *ctx, Flag sign, Sint32 exp, Uint64 sig) {
+CanonicalNaN float64_to_canonical_nan(Context* ctx, Float64 a) {
+  if (float64_is_snan(a)) {
+    context_raise(ctx, EXCEPTION_INVALID);
+  }
+  CanonicalNaN nan;
+  nan.sign = a.bits >> 63;
+  nan.lo = 0;
+  nan.hi = a.bits << 12; 
+  return nan;
+}
+
+Float64 float64_round_and_pack(Context *ctx, Flag sign, Sint32 exp, Uint64 sig) {
   const Round rounding_mode = ctx->round;
   const Flag round_nearest_even = rounding_mode == ROUND_NEAREST_EVEN;
   Sint16 round_increment = 0x200;
@@ -118,7 +96,7 @@ static inline Float64 float64_normalize_round_and_pack(Context *ctx, Flag sign, 
   return float64_round_and_pack(ctx, sign, exp - shift, sig << shift);
 }
 
-static inline Normal64 float64_normalize_subnormal(Uint64 sig) {
+Normal64 float64_normalize_subnormal(Uint64 sig) {
   const Sint8 shift = count_leading_zeros_u64(sig) - 11;
   return (Normal64){sig << shift, 1 - shift};
 }

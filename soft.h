@@ -10,6 +10,38 @@ typedef enum Tininess Tininess;
 
 typedef struct Context Context;
 
+typedef struct Float32 Float32;
+typedef struct Float64 Float64;
+typedef struct Normal32 Normal32;
+typedef struct Normal64 Normal64;
+
+typedef struct CanonicalNaN CanonicalNaN;
+
+struct Float32 {
+  Uint32 bits;
+};
+
+struct Float64 {
+  Uint64 bits;
+};
+
+struct Normal32 {
+  Uint32 sig;
+  Sint16 exp;
+};
+
+struct Normal64 {
+  Uint64 sig;
+  Sint16 exp;
+};
+
+// Canonical NaN format for conversion between NaNs in different precisions.
+struct CanonicalNaN {
+  Flag sign;
+  Uint64 hi;
+  Uint64 lo;
+};
+
 enum Round {
   ROUND_NEAREST_EVEN,
   ROUND_TO_ZERO,
@@ -61,5 +93,8 @@ static inline Uint64 rshr64(Uint64 a, Sint16 count) {
   }
   return a != 0 ? 1 : 0;
 }
+
+Float32 float64_to_float32(Context*, Float64);
+Float64 float32_to_float64(Context*, Float32);
 
 #endif // SOFT_H
