@@ -1,5 +1,5 @@
 #include "kernel32.h"
-#include "soft64.h"
+#include "float64.h"
 
 // When the result of evaluating something is not used the compiler will attempt
 // to remove that dead code, even though in this case we want the evaluation

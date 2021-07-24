@@ -68,11 +68,6 @@ static const struct {
   { "copysign", FUNC_COPYSIGN }
 };
 
-static const Float32 ZERO32 = {0x00000000}; // 0x0p+0
-static const Float32 ONE32  = {0x3f800000}; // 0x1p+0
-
-static const Float64 ZERO64 = {(Uint64)0x0000000000000000ull}; // 0x0p+0
-
 #define ARRAY_COUNT(x) \
   (sizeof (x) / sizeof (*(x)))
 
@@ -175,7 +170,7 @@ static Float32 eval_func1_32(Context *ctx, Uint32 func, Float32 a) {
     // TODO(dweiler): remove, just for testing.
     return float32_cosd(ctx, float32_to_float64(ctx, a));
   }
-  return ZERO32;
+  return FLOAT32_ZERO;
 }
 
 static Float32 eval_func2_32(Context *ctx, Uint32 func, Float32 a, Float32 b) {
@@ -187,35 +182,36 @@ static Float32 eval_func2_32(Context *ctx, Uint32 func, Float32 a, Float32 b) {
   case FUNC_COPYSIGN:
     return float32_copysign(ctx, a, b);
   }
-  return ZERO32;
+  return FLOAT32_ZERO;
 }
 
 Float32 expr_eval32(Context *ctx, Expression *expression) {
   if (!expression) {
-    return ZERO32;
+    return FLOAT32_ZERO;
   }
 
   Float32 a = expr_eval32(ctx, expression->params[0]);
   Float32 b = expr_eval32(ctx, expression->params[1]);
 
-  Float32 result = ZERO32;
+  Float32 result = FLOAT32_ZERO;
 
   switch (expression->type) {
   /****/ case EXPR_VALUE: result = expression->value;
   break; case EXPR_CONST: result = CONSTANTS[expression->constant].value;
   break; case EXPR_FUNC1: result = eval_func1_32(ctx, expression->func, a);
   break; case EXPR_FUNC2: result = eval_func2_32(ctx, expression->func, a, b);
-  break; case EXPR_EQ:    result = float32_eq(ctx, a, b) ? ONE32 : ZERO32;
-  break; case EXPR_LTE:   result = float32_lte(ctx, a, b) ? ONE32 : ZERO32;
-  break; case EXPR_LT:    result = float32_lt(ctx, a, b) ? ONE32 : ZERO32;
-  break; case EXPR_NE:    result = float32_ne(ctx, a, b) ? ONE32 : ZERO32;
-  break; case EXPR_GTE:   result = float32_gte(ctx, a, b) ? ONE32 : ZERO32;
-  break; case EXPR_GT:    result = float32_gt(ctx, a, b) ? ONE32 : ZERO32;
+  break; case EXPR_EQ:    result = float32_eq(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
+  break; case EXPR_LTE:   result = float32_lte(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
+  break; case EXPR_LT:    result = float32_lt(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
+  break; case EXPR_NE:    result = float32_ne(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
+  break; case EXPR_GTE:   result = float32_gte(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
+  break; case EXPR_GT:    result = float32_gt(ctx, a, b) ? FLOAT32_ONE : FLOAT32_ZERO;
   break; case EXPR_ADD:   result = float32_add(ctx, a, b);
   break; case EXPR_SUB:   result = float32_sub(ctx, a, b);
   break; case EXPR_MUL:   result = float32_mul(ctx, a, b);
   break; case EXPR_DIV:   result = float32_div(ctx, a, b);
-  break; case EXPR_LAST:  result = ZERO32;
+  break; case EXPR_LAST:  // Empty.
+  break;
   }
 
   Size n_operations = array_size(ctx->operations);
@@ -268,7 +264,7 @@ Float32 expr_eval32(Context *ctx, Expression *expression) {
 
 Float64 expr_eval64(Context *ctx, Expression *expression) {
   if (!expression) {
-    return ZERO64;
+    return FLOAT64_ZERO;
   }
 
   Float64 a = expr_eval64(ctx, expression->params[0]);
@@ -278,7 +274,7 @@ Float64 expr_eval64(Context *ctx, Expression *expression) {
   (void)a;
   (void)b;
 
-  Float64 result = ZERO64;
+  Float64 result = FLOAT64_ZERO;
 
   return result;
 }
@@ -289,7 +285,7 @@ static Expression *create(int type, Expression *e0, Expression *e1) {
     return NULL;
   }
   e->type = type;
-  e->value = ONE32;
+  e->value = FLOAT32_ONE;
   e->params[0] = e0;
   e->params[1] = e1;
   return e;
@@ -312,7 +308,7 @@ static Bool parse_primary(Expression **e, Parser *p, Flag sign) {
     return true;
   }
 
-  d->value = ONE32;
+  d->value = FLOAT32_ONE;
 
   for (Size i = 0; i < sizeof CONSTANTS / sizeof *CONSTANTS; i++) {
     if (!match(p->s, CONSTANTS[i].identifier)) {

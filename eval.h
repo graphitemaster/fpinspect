@@ -1,7 +1,7 @@
 #ifndef EVAL_H
 #define EVAL_H
-#include "soft32.h"
-#include "soft64.h"
+#include "float32.h"
+#include "float64.h"
 
 typedef struct Expression Expression;
 

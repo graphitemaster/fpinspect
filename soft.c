@@ -1,5 +1,5 @@
-#include "soft32.h"
-#include "soft64.h"
+#include "float32.h"
+#include "float64.h"
 
 void context_init(Context* context) {
   context->exceptions = NULL;
