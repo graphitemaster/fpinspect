@@ -51,13 +51,16 @@ configured when evaluating an expression. With exception to transcendental
 functions, all floating point computation is also accurate to <= 1 ULP of error.
 
 Currently there is support for 32-bit single-precision floating-point
-`soft32.{h,c}` and 64-bit double-precision floating-point `soft64.{h,c}`, as
+`float32.{h,c}` and 64-bit double-precision floating-point `float64.{h,c}`, as
 double-precision is necessary for 32-bit single-precision kernels
 `kernel32.{h,c}` to produce correctly rounded and truncated results
 to <= 1 ULP of error.
 
 64-bit double-precision floating-point makes use of 128-bit modular arithmetic
 implemented in `uint128.{h,c}`
+
+Accumulative error accounting is handled by `real32.{h,c}` and `real64.{h,c}`
+for single-precision and double-precision floating-point, respectively.
 
 > NOTE:
 >

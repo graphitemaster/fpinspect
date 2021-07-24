@@ -1,6 +1,6 @@
 #ifndef KERNEL32_H
 #define KERNEL32_H
-#include "soft32.h"
+#include "float32.h"
 
 Float32 float32_floor(Context*, Float32);
 Float32 float32_ceil(Context*, Float32);

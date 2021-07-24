@@ -1,7 +1,5 @@
-#include "soft64.h"
+#include "float64.h"
 #include "uint128.h"
-
-static const Float64 FLOAT64_NAN = {LIT64(0xffffffffffffffff)};
 
 // Count leading zero bits.
 static inline Sint8 count_leading_zeros_u64(Uint64 a) {

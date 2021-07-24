@@ -1,6 +1,4 @@
-#include "soft32.h"
-
-static const Float32 FLOAT32_NAN = {LIT32(0xffffffff)};
+#include "float32.h"
 
 // Count leading zero bits.
 static inline Sint8 count_leading_zeros_u32(Uint32 a) {

@@ -28,6 +28,8 @@ static inline Float64 float64_pack(Flag sign, Sint16 exp, Uint64 sig) {
   return (Float64){(((Uint64)sign) << 63) + (((Uint64)exp) << 52) + sig};
 }
 
+static const Float64 FLOAT64_NAN = {LIT64(0xffffffffffffffff)};
+
 // Conversion of float32 NaN to CanonicalNaN format.
 CanonicalNaN float64_to_canonical_nan(Context*, Float64);
 
@@ -49,4 +51,4 @@ static inline double float64_cast(Float64 x) {
   return u.h;
 }
 
-#endif // SOFT64_H
+#endif // FLOAT64_H
