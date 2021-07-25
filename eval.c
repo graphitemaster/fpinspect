@@ -353,10 +353,10 @@ static Bool parse_primary(Expression **e, Parser *p, Flag sign) {
     }
   }
 
-  fprintf(stderr, "Unknown identifier '%s'", s0);
+  fprintf(stderr, "Unknown identifier '%s'\n", s0);
   expr_free(d);
 
-  return true;
+  return false;
 }
 
 static Bool parse_top(Expression **e, Parser *p) {
